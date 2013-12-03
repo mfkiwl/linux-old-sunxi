@@ -12,6 +12,7 @@
 
 /dts-v1/;
 /include/ "sun4i-a10.dtsi"
+/include/ "sunxi-ahci-reg.dtsi"
 
 / {
 	model = "Cubietech Cubieboard";
@@ -38,6 +39,11 @@
 			pinctrl-0 = <&mmc0_pins_a>;
 			pinctrl-1 = <&mmc0_cd_pin_reference_design>;
 			cd-gpios = <&pio 7 1 0>; /* PH1 */
+			status = "okay";
+		};
+
+		ahci: sata@01c18000 {
+			target-supply = <&reg_ahci_5v>;
 			status = "okay";
 		};
 
