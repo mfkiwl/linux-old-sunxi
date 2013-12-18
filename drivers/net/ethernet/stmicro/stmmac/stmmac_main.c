@@ -808,7 +808,12 @@ static int stmmac_init_phy(struct net_device *dev)
 		 priv->plat->phy_addr);
 	pr_debug("stmmac_init_phy:  trying to attach to %s\n", phy_id_fmt);
 
-	phydev = phy_connect(dev, phy_id_fmt, &stmmac_adjust_link, interface);
+	if (priv->plat->phy_node)
+		phydev = of_phy_connect(dev, priv->plat->phy_node,
+				&stmmac_adjust_link, 0, interface);
+	else
+		phydev = phy_connect(dev, phy_id_fmt, &stmmac_adjust_link,
+				interface);
 
 	if (IS_ERR(phydev)) {
 		pr_err("%s: Could not attach to PHY\n", dev->name);

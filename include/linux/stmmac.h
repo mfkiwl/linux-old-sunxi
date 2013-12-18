@@ -93,10 +93,12 @@ struct stmmac_dma_cfg {
 	int burst_len;
 };
 
+struct device_node;
 struct plat_stmmacenet_data {
 	char *phy_bus_name;
 	int bus_id;
 	int phy_addr;
+	struct device_node *phy_node;
 	int interface;
 	struct stmmac_mdio_bus_data *mdio_bus_data;
 	struct stmmac_dma_cfg *dma_cfg;
