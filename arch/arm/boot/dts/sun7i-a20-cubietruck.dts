@@ -28,6 +28,22 @@
 			status = "okay";
 		};
 
+		mmc3: mmc@01c12000 {
+			pinctrl-names = "default", "default";
+			pinctrl-0 = <&mmc3_pins_a>;
+			pinctrl-1 = <&wifi_host_wake_pin>;
+			cd-mode = <2>;
+			status = "okay";
+
+			brcmf: bcrmf@0 {
+				/* out of band interrupt not working */
+				/* compatible = "broadcom,bcm43362"; */
+				interrupt-parent = <&pio>;
+				interrupts = <10 2>; /* EINT10 */
+				status = "okay";
+			};
+		};
+
 		ehci0: ehci0@0x01c14000 {
 			vbus-supply = <&reg_usb1_vbus>;
 			status = "okay";
@@ -49,6 +65,11 @@
 				allwinner,function = "gpio_in";
 				allwinner,drive = <0>;
 				allwinner,pull = <0>;
+			};
+
+			mmc3_pins_a: mmc3@0 {
+				/* AP6210 requires pull-up */
+				allwinner,pull = <1>;
 			};
 
 			ahci_pwr_pin_cubietruck: ahci_pwr_pin@0 {
@@ -77,6 +98,20 @@
 					allwinner,function = "gpio_out";
 					allwinner,drive = <0>;
 					allwinner,pull = <2>;
+			};
+
+			wifi_pwr_pin: wifi_pwr_pin@0 {
+				allwinner,pins = "PH9";
+				allwinner,function = "gpio_out";
+				allwinner,drive = <0>;
+				allwinner,pull = <0>;
+			};
+
+			wifi_host_wake_pin: wifi_host_wake_pin@0 {
+				allwinner,pins = "PH10";
+				allwinner,function = "gpio_in";
+				allwinner,drive = <0>;
+				allwinner,pull = <0>;
 			};
 		};
 
@@ -155,6 +190,20 @@
 			regulator-max-microvolt = <5000000>;
 			enable-active-high;
 			gpio = <&pio 7 3 0>;
+		};
+	};
+
+	rfkill-switches {
+		compatible = "simple-bus";
+		pinctrl-names = "default";
+
+		rfkill_wifi {
+			compatible = "rfkill-gpio";
+			pinctrl-names = "default";
+			pinctrl-0 = <&wifi_pwr_pin>;
+			shutdown-gpio = <&pio 7 9 0>; /* PH9 */
+			label = "wifi";
+			type = <1>;
 		};
 	};
 };
