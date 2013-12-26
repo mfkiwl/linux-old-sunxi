@@ -61,11 +61,24 @@
 				allwinner,drive = <0>;
 				allwinner,pull = <0>;
 			};
+
+			bt_pwr_pin_cubietruck: bt_pwr_pin@0 {
+				allwinner,pins = "PH18";
+				allwinner,function = "gpio_out";
+				allwinner,drive = <0>;
+				allwinner,pull = <0>;
+			};
 		};
 
 		uart0: serial@01c28000 {
 			pinctrl-names = "default";
 			pinctrl-0 = <&uart0_pins_a>;
+			status = "okay";
+		};
+
+		uart2: serial@01c28800 {
+			pinctrl-names = "default";
+			pinctrl-0 = <&uart2_pins_a>;
 			status = "okay";
 		};
 
@@ -138,5 +151,17 @@
 
 	reg_usb2_vbus: usb2-vbus {
 		status = "okay";
+	};
+
+	rfkill_bt {
+		compatible = "rfkill-gpio";
+		pinctrl-names = "default";
+		pinctrl-0 = <&bt_pwr_pin_cubietruck>, <&clk_out_a_pins_a>;
+		clocks = <&clk_out_a>;
+		clock-frequency = <32768>;
+		gpios = <&pio 7 18 0>; /* PH18 */
+		gpio-names = "reset";
+		rfkill-name = "bt";
+		rfkill-type = <2>;
 	};
 };
