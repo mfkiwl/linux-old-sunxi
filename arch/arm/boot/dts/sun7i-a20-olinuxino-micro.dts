@@ -13,6 +13,7 @@
 
 /dts-v1/;
 /include/ "sun7i-a20.dtsi"
+/include/ "sunxi-ahci-reg.dtsi"
 
 / {
 	model = "Olimex A20-Olinuxino Micro";
@@ -32,6 +33,11 @@
 			pinctrl-0 = <&mmc3_pins_a>;
 			pinctrl-1 = <&mmc3_cd_pin_olinuxinom>;
 			cd-gpios = <&pio 7 11 0>; /* PH11 */
+			status = "okay";
+		};
+
+		ahci: sata@01c18000 {
+			target-supply = <&reg_ahci_5v>;
 			status = "okay";
 		};
 
