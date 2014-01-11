@@ -14,6 +14,7 @@
 
 /dts-v1/;
 /include/ "sun5i-a13.dtsi"
+/include/ "sun5i-a13-usb-vbus-reg.dtsi"
 
 / {
 	model = "Olimex A13-Olinuxino Micro";
@@ -25,6 +26,19 @@
 			pinctrl-0 = <&mmc0_pins_a>;
 			pinctrl-1 = <&mmc0_cd_pin_olinuxinom>;
 			cd-gpios = <&pio 6 0 0>; /* PG0 */
+			status = "okay";
+		};
+
+		usbphy: phy@01c13400 {
+			usb1_vbus-supply = <&reg_usb1_vbus>;
+			status = "okay";
+		};
+
+		ehci0: usb@01c14000 {
+			status = "okay";
+		};
+
+		ohci0: usb@01c14400 {
 			status = "okay";
 		};
 
@@ -40,6 +54,13 @@
 				allwinner,pins = "PG9";
 				allwinner,function = "gpio_out";
 				allwinner,drive = <1>;
+				allwinner,pull = <0>;
+			};
+
+			usb1_vbus_pin_olinuxinom: usb1_vbus_pin@0 {
+				allwinner,pins = "PG11";
+				allwinner,function = "gpio_out";
+				allwinner,drive = <0>;
 				allwinner,pull = <0>;
 			};
 		};
@@ -79,5 +100,10 @@
 			gpios = <&pio 6 9 0>;
 			default-state = "on";
 		};
+	};
+
+	reg_usb1_vbus: usb1-vbus {
+		pinctrl-0 = <&usb1_vbus_pin_olinuxinom>;
+		gpio = <&pio 6 11 0>;
 	};
 };
