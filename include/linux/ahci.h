@@ -23,6 +23,8 @@
 
 #include <linux/clk.h>
 
+#define AHCI_MAX_CLKS		3
+
 struct ata_port;
 
 struct ahci_host_priv {
@@ -37,7 +39,7 @@ struct ahci_host_priv {
 	u32			em_loc; /* enclosure management location */
 	u32			em_buf_sz;	/* EM buffer size in byte */
 	u32			em_msg_type;	/* EM message type */
-	struct clk		*clk;		/* Optional */
+	struct clk		*clks[AHCI_MAX_CLKS]; /* Optional */
 	void			*plat_data;	/* Other platform data */
 	/* Optional ahci_start_engine override */
 	void			(*start_engine)(struct ata_port *ap);

@@ -31,4 +31,7 @@ struct ahci_platform_data {
 	unsigned int mask_port_map;
 };
 
+int ahci_platform_enable_clks(struct ahci_host_priv *hpriv);
+void ahci_platform_disable_clks(struct ahci_host_priv *hpriv);
+
 #endif /* _AHCI_PLATFORM_H */

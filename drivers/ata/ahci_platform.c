@@ -87,6 +87,44 @@ static struct scsi_host_template ahci_platform_sht = {
 	AHCI_SHT("ahci_platform"),
 };
 
+
+int ahci_platform_enable_clks(struct ahci_host_priv *hpriv)
+{
+	int c, rc;
+
+	for (c = 0; c < AHCI_MAX_CLKS && hpriv->clks[c]; c++) {
+		rc = clk_prepare_enable(hpriv->clks[c]);
+		if (rc)
+			goto disable_unprepare_clk;
+	}
+	return 0;
+
+disable_unprepare_clk:
+	while (--c >= 0)
+		clk_disable_unprepare(hpriv->clks[c]);
+	return rc;
+}
+EXPORT_SYMBOL_GPL(ahci_platform_enable_clks);
+
+void ahci_platform_disable_clks(struct ahci_host_priv *hpriv)
+{
+	int c;
+
+	for (c = AHCI_MAX_CLKS - 1; c >= 0; c--)
+		if (hpriv->clks[c])
+			clk_disable_unprepare(hpriv->clks[c]);
+}
+EXPORT_SYMBOL_GPL(ahci_platform_disable_clks);
+
+
+static void ahci_put_clks(struct ahci_host_priv *hpriv)
+{
+	int c;
+
+	for (c = 0; c < AHCI_MAX_CLKS && hpriv->clks[c]; c++)
+		clk_put(hpriv->clks[c]);
+}
+
 static int ahci_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -97,10 +135,8 @@ static int ahci_probe(struct platform_device *pdev)
 	struct ahci_host_priv *hpriv;
 	struct ata_host *host;
 	struct resource *mem;
-	int irq;
-	int n_ports;
-	int i;
-	int rc;
+	struct clk *clk;
+	int i, irq, max_clk, n_ports, rc;
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {
@@ -131,16 +167,25 @@ static int ahci_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	hpriv->clk = clk_get(dev, NULL);
-	if (IS_ERR(hpriv->clk)) {
-		dev_err(dev, "can't get clock\n");
-	} else {
-		rc = clk_prepare_enable(hpriv->clk);
-		if (rc) {
-			dev_err(dev, "clock prepare enable failed");
-			goto free_clk;
+	max_clk = dev->of_node ? AHCI_MAX_CLKS : 1;
+	for (i = 0; i < max_clk; i++) {
+		if (i == 0)
+			clk = clk_get(dev, NULL); /* For old platform init */
+		else
+			clk = of_clk_get(dev->of_node, i);
+
+		if (IS_ERR(clk)) {
+			rc = PTR_ERR(clk);
+			if (rc == -EPROBE_DEFER)
+				goto free_clk;
+			break;
 		}
+		hpriv->clks[i] = clk;
 	}
+
+	rc = ahci_enable_clks(dev, hpriv);
+	if (rc)
+		goto free_clk;
 
 	/*
 	 * Some platforms might need to prepare for mmio region access,
@@ -222,11 +267,9 @@ pdata_exit:
 	if (pdata && pdata->exit)
 		pdata->exit(dev);
 disable_unprepare_clk:
-	if (!IS_ERR(hpriv->clk))
-		clk_disable_unprepare(hpriv->clk);
+	ahci_disable_clks(hpriv);
 free_clk:
-	if (!IS_ERR(hpriv->clk))
-		clk_put(hpriv->clk);
+	ahci_put_clks(hpriv);
 	return rc;
 }
 
@@ -239,10 +282,8 @@ static void ahci_host_stop(struct ata_host *host)
 	if (pdata && pdata->exit)
 		pdata->exit(dev);
 
-	if (!IS_ERR(hpriv->clk)) {
-		clk_disable_unprepare(hpriv->clk);
-		clk_put(hpriv->clk);
-	}
+	ahci_disable_clks(hpriv);
+	ahci_put_clks(hpriv);
 }
 
 #ifdef CONFIG_PM_SLEEP
@@ -277,8 +318,7 @@ static int ahci_suspend(struct device *dev)
 	if (pdata && pdata->suspend)
 		return pdata->suspend(dev);
 
-	if (!IS_ERR(hpriv->clk))
-		clk_disable_unprepare(hpriv->clk);
+	ahci_disable_clks(hpriv);
 
 	return 0;
 }
@@ -290,13 +330,9 @@ static int ahci_resume(struct device *dev)
 	struct ahci_host_priv *hpriv = host->private_data;
 	int rc;
 
-	if (!IS_ERR(hpriv->clk)) {
-		rc = clk_prepare_enable(hpriv->clk);
-		if (rc) {
-			dev_err(dev, "clock prepare enable failed");
-			return rc;
-		}
-	}
+	rc = ahci_enable_clks(dev, hpriv);
+	if (rc)
+		return rc;
 
 	if (pdata && pdata->resume) {
 		rc = pdata->resume(dev);
@@ -317,8 +353,7 @@ static int ahci_resume(struct device *dev)
 	return 0;
 
 disable_unprepare_clk:
-	if (!IS_ERR(hpriv->clk))
-		clk_disable_unprepare(hpriv->clk);
+	ahci_disable_clks(hpriv);
 
 	return rc;
 }
