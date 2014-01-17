@@ -167,6 +167,13 @@ static int ahci_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
+	hpriv->target_pwr = devm_regulator_get_optional(dev, "target");
+	if (IS_ERR(hpriv->target_pwr)) {
+		if (PTR_ERR(hpriv->target_pwr) == -EPROBE_DEFER)
+			return -EPROBE_DEFER;
+		hpriv->target_pwr = NULL;
+	}
+
 	max_clk = dev->of_node ? AHCI_MAX_CLKS : 1;
 	for (i = 0; i < max_clk; i++) {
 		if (i == 0)
@@ -183,9 +190,15 @@ static int ahci_probe(struct platform_device *pdev)
 		hpriv->clks[i] = clk;
 	}
 
+	if (hpriv->target_pwr) {
+		rc = regulator_enable(hpriv->target_pwr);
+		if (rc)
+			goto free_clk;
+	}
+
 	rc = ahci_enable_clks(dev, hpriv);
 	if (rc)
-		goto free_clk;
+		goto disable_regulator;
 
 	/*
 	 * Some platforms might need to prepare for mmio region access,
@@ -268,6 +281,9 @@ pdata_exit:
 		pdata->exit(dev);
 disable_unprepare_clk:
 	ahci_disable_clks(hpriv);
+disable_regulator:
+	if (hpriv->target_pwr)
+		regulator_disable(hpriv->target_pwr);
 free_clk:
 	ahci_put_clks(hpriv);
 	return rc;
@@ -284,6 +300,9 @@ static void ahci_host_stop(struct ata_host *host)
 
 	ahci_disable_clks(hpriv);
 	ahci_put_clks(hpriv);
+
+	if (hpriv->target_pwr)
+		regulator_disable(hpriv->target_pwr);
 }
 
 #ifdef CONFIG_PM_SLEEP
@@ -320,6 +339,9 @@ static int ahci_suspend(struct device *dev)
 
 	ahci_disable_clks(hpriv);
 
+	if (hpriv->target_pwr)
+		regulator_disable(hpriv->target_pwr);
+
 	return 0;
 }
 
@@ -330,9 +352,15 @@ static int ahci_resume(struct device *dev)
 	struct ahci_host_priv *hpriv = host->private_data;
 	int rc;
 
+	if (hpriv->target_pwr) {
+		rc = regulator_enable(hpriv->target_pwr);
+		if (rc)
+			return rc;
+	}
+
 	rc = ahci_enable_clks(dev, hpriv);
 	if (rc)
-		return rc;
+		goto disable_regulator;
 
 	if (pdata && pdata->resume) {
 		rc = pdata->resume(dev);
@@ -354,6 +382,9 @@ static int ahci_resume(struct device *dev)
 
 disable_unprepare_clk:
 	ahci_disable_clks(hpriv);
+disable_regulator:
+	if (hpriv->target_pwr)
+		regulator_disable(hpriv->target_pwr);
 
 	return rc;
 }
