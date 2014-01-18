@@ -168,7 +168,7 @@ static const struct ata_port_info ahci_imx_port_info = {
 	.port_ops	= &ahci_imx_ops,
 };
 
-static int imx_sata_init(struct device *dev, void __iomem *mmio)
+static int imx_sata_init(struct device *dev, struct ahci_host_priv *hpriv)
 {
 	int ret = 0;
 	unsigned int reg_val;
@@ -185,19 +185,19 @@ static int imx_sata_init(struct device *dev, void __iomem *mmio)
 	 * Implement the port0.
 	 * Get the ahb clock rate, and configure the TIMER1MS register.
 	 */
-	reg_val = readl(mmio + HOST_CAP);
+	reg_val = readl(hpriv->mmio + HOST_CAP);
 	if (!(reg_val & HOST_CAP_SSS)) {
 		reg_val |= HOST_CAP_SSS;
-		writel(reg_val, mmio + HOST_CAP);
+		writel(reg_val, hpriv->mmio + HOST_CAP);
 	}
-	reg_val = readl(mmio + HOST_PORTS_IMPL);
+	reg_val = readl(hpriv->mmio + HOST_PORTS_IMPL);
 	if (!(reg_val & 0x1)) {
 		reg_val |= 0x1;
-		writel(reg_val, mmio + HOST_PORTS_IMPL);
+		writel(reg_val, hpriv->mmio + HOST_PORTS_IMPL);
 	}
 
 	reg_val = clk_get_rate(imxpriv->ahb_clk) / 1000;
-	writel(reg_val, mmio + HOST_TIMER1MS);
+	writel(reg_val, hpriv->mmio + HOST_TIMER1MS);
 
 	return 0;
 }

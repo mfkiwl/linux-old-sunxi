@@ -149,7 +149,7 @@ static int ahci_probe(struct platform_device *pdev)
 	 * returned successfully.
 	 */
 	if (pdata && pdata->init) {
-		rc = pdata->init(dev, hpriv->mmio);
+		rc = pdata->init(dev, hpriv);
 		if (rc)
 			goto disable_unprepare_clk;
 	}
