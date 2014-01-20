@@ -353,14 +353,12 @@ static void ahci_host_stop(struct ata_host *host)
 }
 
 #ifdef CONFIG_PM_SLEEP
-static int ahci_suspend(struct device *dev)
+int ahci_platform_suspend_host(struct device *dev)
 {
-	struct ahci_platform_data *pdata = dev_get_platdata(dev);
 	struct ata_host *host = dev_get_drvdata(dev);
 	struct ahci_host_priv *hpriv = host->private_data;
 	void __iomem *mmio = hpriv->mmio;
 	u32 ctl;
-	int rc;
 
 	if (hpriv->flags & AHCI_HFLAG_NO_SUSPEND) {
 		dev_err(dev, "firmware update required for suspend/resume\n");
@@ -377,7 +375,37 @@ static int ahci_suspend(struct device *dev)
 	writel(ctl, mmio + HOST_CTL);
 	readl(mmio + HOST_CTL); /* flush */
 
-	rc = ata_host_suspend(host, PMSG_SUSPEND);
+	return ata_host_suspend(host, PMSG_SUSPEND);
+}
+EXPORT_SYMBOL_GPL(ahci_platform_suspend_host);
+
+int ahci_platform_resume_host(struct device *dev)
+{
+	struct ata_host *host = dev_get_drvdata(dev);
+	int rc;
+
+	if (dev->power.power_state.event == PM_EVENT_SUSPEND) {
+		rc = ahci_reset_controller(host);
+		if (rc)
+			return rc;
+
+		ahci_init_controller(host);
+	}
+
+	ata_host_resume(host);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(ahci_platform_resume_host);
+
+int ahci_platform_suspend(struct device *dev)
+{
+	struct ahci_platform_data *pdata = dev_get_platdata(dev);
+	struct ata_host *host = dev_get_drvdata(dev);
+	struct ahci_host_priv *hpriv = host->private_data;
+	int rc;
+
+	rc = ahci_platform_suspend_host(dev);
 	if (rc)
 		return rc;
 
@@ -388,8 +416,9 @@ static int ahci_suspend(struct device *dev)
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(ahci_platform_suspend);
 
-static int ahci_resume(struct device *dev)
+int ahci_platform_resume(struct device *dev)
 {
 	struct ahci_platform_data *pdata = dev_get_platdata(dev);
 	struct ata_host *host = dev_get_drvdata(dev);
@@ -406,15 +435,9 @@ static int ahci_resume(struct device *dev)
 			goto disable_resources;
 	}
 
-	if (dev->power.power_state.event == PM_EVENT_SUSPEND) {
-		rc = ahci_reset_controller(host);
-		if (rc)
-			goto disable_resources;
-
-		ahci_init_controller(host);
-	}
-
-	ata_host_resume(host);
+	rc = ahci_platform_resume_host(dev);
+	if (rc)
+		goto disable_resources;
 
 	return 0;
 
@@ -423,9 +446,11 @@ disable_resources:
 
 	return rc;
 }
+EXPORT_SYMBOL_GPL(ahci_platform_resume);
 #endif
 
-static SIMPLE_DEV_PM_OPS(ahci_pm_ops, ahci_suspend, ahci_resume);
+static SIMPLE_DEV_PM_OPS(ahci_pm_ops, ahci_platform_suspend,
+			 ahci_platform_resume);
 
 static const struct of_device_id ahci_of_match[] = {
 	{ .compatible = "snps,spear-ahci", },
