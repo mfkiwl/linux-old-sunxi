@@ -35,7 +35,7 @@
 #ifndef _AHCI_H
 #define _AHCI_H
 
-#include <linux/clk.h>
+#include <linux/ahci.h>
 #include <linux/libata.h>
 
 /* Enclosure Management Control */
@@ -307,24 +307,6 @@ struct ahci_port_priv {
 	/* enclosure management info per PM slot */
 	struct ahci_em_priv	em_priv[EM_MAX_SLOTS];
 	char			*irq_desc;	/* desc in /proc/interrupts */
-};
-
-struct ahci_host_priv {
-	void __iomem *		mmio;		/* bus-independent mem map */
-	unsigned int		flags;		/* AHCI_HFLAG_* */
-	u32			cap;		/* cap to use */
-	u32			cap2;		/* cap2 to use */
-	u32			port_map;	/* port map to use */
-	u32			saved_cap;	/* saved initial cap */
-	u32			saved_cap2;	/* saved initial cap2 */
-	u32			saved_port_map;	/* saved initial port_map */
-	u32 			em_loc; /* enclosure management location */
-	u32			em_buf_sz;	/* EM buffer size in byte */
-	u32			em_msg_type;	/* EM message type */
-	struct clk		*clk;		/* Only for platforms supporting clk */
-	void			*plat_data;	/* Other platform data */
-	/* Optional ahci_start_engine override */
-	void			(*start_engine)(struct ata_port *ap);
 };
 
 extern int ahci_ignore_sss;
