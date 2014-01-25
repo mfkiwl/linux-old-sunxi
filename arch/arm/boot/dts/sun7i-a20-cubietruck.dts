@@ -52,6 +52,16 @@
 			status = "okay";
 		};
 
+		usb_otg: usb@01c13000 {
+			pinctrl-names = "default";
+			pinctrl-0 = <&usb0_id_detect_pin_cubietruck
+				    &usb0_vbus_detect_pin_cubietruck>;
+			dr_mode = "otg";
+			id_det-gpios = <&pio 7 19 0>; /* PH19 */
+			vbus_det-gpios = <&pio 7 22 0>; /* PH22 */
+			status = "okay";
+		};
+
 		ehci0: usb@01c14000 {
 			status = "okay";
 		};
