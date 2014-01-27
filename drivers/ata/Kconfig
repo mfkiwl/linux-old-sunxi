@@ -91,6 +91,7 @@ config SATA_AHCI
 
 config SATA_AHCI_PLATFORM
 	tristate "Platform AHCI SATA support"
+	depends on GENERIC_PHY || !GENERIC_PHY
 	help
 	  This option enables support for Platform AHCI Serial ATA
 	  controllers.
