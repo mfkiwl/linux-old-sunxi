@@ -194,7 +194,7 @@ static int ahci_sunxi_probe(struct platform_device *pdev)
 disable_resources:
 	ahci_platform_disable_resources(hpriv);
 put_resources:
-	ahci_platform_put_resources(hpriv);
+	ahci_platform_put_resources(dev, hpriv);
 	return rc;
 }
 

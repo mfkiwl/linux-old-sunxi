@@ -43,7 +43,8 @@ int ahci_platform_enable_resources(struct ahci_host_priv *hpriv);
 void ahci_platform_disable_resources(struct ahci_host_priv *hpriv);
 struct ahci_host_priv *ahci_platform_get_resources(
 	struct platform_device *pdev);
-void ahci_platform_put_resources(struct ahci_host_priv *hpriv);
+void ahci_platform_put_resources(struct device *dev,
+				 struct ahci_host_priv *hpriv);
 int ahci_platform_init_host(struct platform_device *pdev,
 			    struct ahci_host_priv *hpriv,
 			    const struct ata_port_info *pi_template,

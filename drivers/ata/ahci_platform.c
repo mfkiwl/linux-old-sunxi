@@ -243,7 +243,8 @@ free_clk:
 }
 EXPORT_SYMBOL_GPL(ahci_platform_get_resources);
 
-void ahci_platform_put_resources(struct ahci_host_priv *hpriv)
+void ahci_platform_put_resources(struct device *dev,
+				 struct ahci_host_priv *hpriv)
 {
 	int c;
 
@@ -375,7 +376,7 @@ pdata_exit:
 disable_resources:
 	ahci_platform_disable_resources(hpriv);
 put_resources:
-	ahci_platform_put_resources(hpriv);
+	ahci_platform_put_resources(dev, hpriv);
 	return rc;
 }
 
@@ -389,7 +390,7 @@ static void ahci_host_stop(struct ata_host *host)
 		pdata->exit(dev);
 
 	ahci_platform_disable_resources(hpriv);
-	ahci_platform_put_resources(hpriv);
+	ahci_platform_put_resources(dev, hpriv);
 }
 
 #ifdef CONFIG_PM_SLEEP

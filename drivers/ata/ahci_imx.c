@@ -274,16 +274,17 @@ static int imx_ahci_probe(struct platform_device *pdev)
 disable:
 	imx_sata_disable(hpriv);
 put_resources:
-	ahci_platform_put_resources(hpriv);
+	ahci_platform_put_resources(dev, hpriv);
 	return ret;
 }
 
 static void ahci_imx_host_stop(struct ata_host *host)
 {
+	struct device *dev = host->dev;
 	struct ahci_host_priv *hpriv = host->private_data;
 
 	imx_sata_disable(hpriv);
-	ahci_platform_put_resources(hpriv);
+	ahci_platform_put_resources(dev, hpriv);
 }
 
 static int imx_ahci_suspend(struct device *dev)
