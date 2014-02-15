@@ -19,7 +19,30 @@
 	compatible = "olimex,a20-olinuxino-micro", "allwinner,sun7i-a20";
 
 	soc@01c00000 {
+		mmc0: mmc@01c0f000 {
+			pinctrl-names = "default", "default";
+			pinctrl-0 = <&mmc0_pins_a>;
+			pinctrl-1 = <&mmc0_cd_pin_reference_design>;
+			cd-gpios = <&pio 7 1 0>; /* PH1 */
+			status = "okay";
+		};
+
+		mmc3: mmc@01c12000 {
+			pinctrl-names = "default", "default";
+			pinctrl-0 = <&mmc3_pins_a>;
+			pinctrl-1 = <&mmc3_cd_pin_olinuxinom>;
+			cd-gpios = <&pio 7 11 0>; /* PH11 */
+			status = "okay";
+		};
+
 		pinctrl@01c20800 {
+			mmc3_cd_pin_olinuxinom: mmc3_cd_pin@0 {
+				allwinner,pins = "PH11";
+				allwinner,function = "gpio_in";
+				allwinner,drive = <0>;
+				allwinner,pull = <1>;
+			};
+
 			led_pins_olinuxino: led_pins@0 {
 				allwinner,pins = "PH2";
 				allwinner,function = "gpio_out";
