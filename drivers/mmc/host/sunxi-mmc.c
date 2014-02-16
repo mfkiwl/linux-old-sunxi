@@ -593,18 +593,9 @@ static void sunxi_mmc_enable_sdio_irq(struct mmc_host *mmc, int enable)
 {
 	struct sunxi_mmc_host *smc_host = mmc_priv(mmc);
 	unsigned long flags;
-	int ret;
 	u32 imask;
 
 	spin_lock_irqsave(&smc_host->lock, flags);
-
-	/* Make sure the controller is in a sane state before enabling irqs */
-	ret = sunxi_mmc_init_host(host->mmc);
-	if (ret) {
-		spin_unlock_irqrestore(&smc_host->lock, flags);
-		return ret;
-	}
-
 	imask = mci_readl(smc_host, REG_IMASK);
 	if (enable) {
 		smc_host->sdio_imask = SDXC_SDIO_INTERRUPT;
