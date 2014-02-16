@@ -420,17 +420,6 @@ static void sunxi_mmc_oclk_onoff(struct sunxi_mmc_host *host, u32 oclk_en)
 	}
 }
 
-static void sunxi_mmc_set_clk_dly(struct sunxi_mmc_host *smc_host,
-				  u32 oclk_dly, u32 sclk_dly)
-{
-	unsigned long iflags;
-	struct clk_hw *hw = __clk_get_hw(smc_host->clk_mod);
-
-	spin_lock_irqsave(&smc_host->lock, iflags);
-	clk_sunxi_mmc_phase_control(hw, sclk_dly, oclk_dly);
-	spin_unlock_irqrestore(&smc_host->lock, iflags);
-}
-
 struct sunxi_mmc_clk_dly mmc_clk_dly[MMC_CLK_MOD_NUM] = {
 	{ MMC_CLK_400K, 0, 7 },
 	{ MMC_CLK_25M, 0, 5 },
@@ -450,6 +439,7 @@ static void sunxi_mmc_clk_set_rate(struct sunxi_mmc_host *smc_host,
 	u32 sclk_dly;
 	u32 temp;
 	struct sunxi_mmc_clk_dly *dly = NULL;
+	struct clk_hw *hw = __clk_get_hw(smc_host->clk_mod);
 
 	newrate = clk_round_rate(smc_host->clk_mod, rate);
 	if (smc_host->clk_mod_rate == newrate) {
@@ -508,7 +498,7 @@ static void sunxi_mmc_clk_set_rate(struct sunxi_mmc_host *smc_host,
 			sclk_dly--;
 	}
 
-	sunxi_mmc_set_clk_dly(smc_host, oclk_dly, sclk_dly);
+	clk_sunxi_mmc_phase_control(hw, sclk_dly, oclk_dly);
 	sunxi_mmc_oclk_onoff(smc_host, 1);
 
 	/* oclk_onoff sets various irq status bits, clear these */
