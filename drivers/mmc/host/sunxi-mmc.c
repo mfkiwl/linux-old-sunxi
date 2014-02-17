@@ -766,10 +766,6 @@ static int sunxi_mmc_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	ret = mmc_of_parse(mmc);
-	if (ret)
-		goto error_free_host;
-
 	host = mmc_priv(mmc);
 	host->mmc = mmc;
 	spin_lock_init(&host->lock);
@@ -806,8 +802,11 @@ static int sunxi_mmc_probe(struct platform_device *pdev)
 		     MMC_CAP_SDIO_IRQ;
 	mmc->caps2 |= MMC_CAP2_NO_PRESCAN_POWERUP;
 
-	ret = mmc_add_host(mmc);
+	ret = mmc_of_parse(mmc);
+	if (ret)
+		goto error_free_dma;
 
+	ret = mmc_add_host(mmc);
 	if (ret)
 		goto error_free_dma;
 
