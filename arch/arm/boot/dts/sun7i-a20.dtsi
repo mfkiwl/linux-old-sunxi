@@ -399,6 +399,7 @@
 			clock-names = "ahb", "mod";
 			interrupts = <0 32 4>;
 			bus-width = <4>;
+			cd-inverted;
 			status = "disabled";
 		};
 
@@ -409,6 +410,7 @@
 			clock-names = "ahb", "mod";
 			interrupts = <0 33 4>;
 			bus-width = <4>;
+			cd-inverted;
 			status = "disabled";
 		};
 
@@ -419,6 +421,7 @@
 			clock-names = "ahb", "mod";
 			interrupts = <0 34 4>;
 			bus-width = <4>;
+			cd-inverted;
 			status = "disabled";
 		};
 
@@ -429,6 +432,7 @@
 			clock-names = "ahb", "mod";
 			interrupts = <0 35 4>;
 			bus-width = <4>;
+			cd-inverted;
 			status = "disabled";
 		};
 
@@ -546,7 +550,7 @@
 			mmc0_pins_a: mmc0@0 {
 				allwinner,pins = "PF0","PF1","PF2","PF3","PF4","PF5";
 				allwinner,function = "mmc0";
-				allwinner,drive = <3>;
+				allwinner,drive = <2>;
 				allwinner,pull = <0>;
 			};
 
@@ -560,7 +564,7 @@
 			mmc3_pins_a: mmc3@0 {
 				allwinner,pins = "PI4","PI5","PI6","PI7","PI8","PI9";
 				allwinner,function = "mmc3";
-				allwinner,drive = <3>;
+				allwinner,drive = <2>;
 				allwinner,pull = <0>;
 			};
 		};
