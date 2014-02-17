@@ -211,7 +211,6 @@ struct sunxi_mmc_host {
 
 	/* flags */
 	u32		power_on:1;
-	u32		io_flag:1;
 	u32		wait_dma:1;
 
 	dma_addr_t	sg_dma;

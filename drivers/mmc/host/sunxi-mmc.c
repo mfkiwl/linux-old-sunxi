@@ -400,9 +400,6 @@ static void sunxi_mmc_oclk_onoff(struct sunxi_mmc_host *host, u32 oclk_en)
 	if (oclk_en)
 		rval |= SDXC_CARD_CLOCK_ON;
 
-	if (!host->io_flag)
-		rval |= SDXC_LOW_POWER_ON;
-
 	mci_writel(host, REG_CLKCR, rval);
 
 	rval = SDXC_START | SDXC_UPCLK_ONLY | SDXC_WAIT_PRE_OVER;
