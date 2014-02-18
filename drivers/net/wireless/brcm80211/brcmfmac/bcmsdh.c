@@ -28,6 +28,7 @@
 #include <linux/mmc/sdio_ids.h>
 #include <linux/mmc/card.h>
 #include <linux/mmc/host.h>
+#include <linux/of_irq.h>
 #include <linux/platform_device.h>
 #include <linux/platform_data/brcmfmac-sdio.h>
 #include <linux/suspend.h>
@@ -967,6 +968,49 @@ MODULE_DEVICE_TABLE(sdio, brcmf_sdmmc_ids);
 static struct brcmfmac_sdio_platform_data *brcmfmac_sdio_pdata;
 
 
+static const struct of_device_id brcmf_of_ids[] = {
+	{ .compatible = "brcm,bcm43143" },
+	{ .compatible = "brcm,bcm43241" },
+	{ .compatible = "brcm,bcm4329" },
+	{ .compatible = "brcm,bcm4330" },
+	{ .compatible = "brcm,bcm4334" },
+	{ .compatible = "brcm,bcm4335" },
+	{ .compatible = "brcm,bcm4339" },
+	{ .compatible = "brcm,bcm43362" },
+	{ .compatible = "brcm,brcmfmac" },
+	{ /* sentinal */ },
+};
+MODULE_DEVICE_TABLE(of, brcmf_of_ids);
+
+static void brcmf_of_probe(struct brcmf_sdio_dev *sdiodev)
+{
+	struct device *dev = sdiodev->dev;
+	struct device_node *np = dev->of_node;
+	int irq;
+
+	if (!np) {
+		np = of_find_matching_node(NULL, brcmf_of_ids);
+		if (!np) {
+			dev_notice(dev, "device tree node not found\n");
+			return;
+		}
+	}
+
+	irq = irq_of_parse_and_map(np, 0);
+	if (irq < 0) {
+		dev_warn(dev, "could not map interrupt\n");
+		return;
+	}
+
+	sdiodev->pdata = devm_kzalloc(dev,
+			sizeof(struct brcmfmac_sdio_platform_data),
+			GFP_KERNEL);
+
+	sdiodev->pdata->oob_irq_supported = true;
+	sdiodev->pdata->oob_irq_nr = irq;
+}
+
+
 static int brcmf_ops_sdio_probe(struct sdio_func *func,
 				const struct sdio_device_id *id)
 {
@@ -1012,6 +1056,11 @@ static int brcmf_ops_sdio_probe(struct sdio_func *func,
 	dev_set_drvdata(&sdiodev->func[1]->dev, bus_if);
 	sdiodev->dev = &sdiodev->func[1]->dev;
 	sdiodev->pdata = brcmfmac_sdio_pdata;
+
+#ifdef CONFIG_OF
+	if (!sdiodev->pdata)
+		brcmf_of_probe(sdiodev);
+#endif
 
 	atomic_set(&sdiodev->suspend, false);
 	init_waitqueue_head(&sdiodev->request_word_wait);
@@ -1115,11 +1164,12 @@ static struct sdio_driver brcmf_sdmmc_driver = {
 	.remove = brcmf_ops_sdio_remove,
 	.name = BRCMFMAC_SDIO_PDATA_NAME,
 	.id_table = brcmf_sdmmc_ids,
-#ifdef CONFIG_PM_SLEEP
 	.drv = {
+#ifdef CONFIG_PM_SLEEP
 		.pm = &brcmf_sdio_pm_ops,
-	},
+		.of_match_table = of_match_ptr(brcmf_of_ids),
 #endif	/* CONFIG_PM_SLEEP */
+	},
 };
 
 static int brcmf_sdio_pd_probe(struct platform_device *pdev)
