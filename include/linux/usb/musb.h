@@ -108,7 +108,7 @@ struct musb_hdrc_platform_data {
 	/* (HOST or OTG) switch VBUS on/off */
 	int		(*set_vbus)(struct device *dev, int is_on);
 
-	/* (HOST or OTG) mA/2 power supplied on (default = 8mA) */
+	/* (HOST or OTG) mA/2 power supplied on (default = 500mA) */
 	u8		power;
 
 	/* (PERIPHERAL) mA/2 max power consumed (default = 100mA) */
