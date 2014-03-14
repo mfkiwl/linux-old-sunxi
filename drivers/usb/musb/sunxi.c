@@ -34,6 +34,15 @@
 
 #include "musb_core.h"
 
+#define ISCR_ID_PULLUP_EN              BIT(17)
+#define ISCR_DPDM_PULLUP_EN            BIT(16)
+#define ISCR_FORCE_ID_MASK             (0x3 << 14)
+#define ISCR_FORCE_ID_LOW              (0x2 << 14)
+#define ISCR_FORCE_ID_HIGH             (0x3 << 14)
+#define ISCR_FORCE_VBUS_VALID_MASK     (0x3 << 12)
+#define ISCR_FORCE_VBUS_VALID_LOW      (0x2 << 12)
+#define ISCR_FORCE_VBUS_VALID_HIGH     (0x3 << 12)
+
 /* Allwinner OTG supports up to 5 endpoints */
 #define SUNXI_MUSB_MAX_EP_NUM	6
 #define SUNXI_MUSB_RAM_BITS	11
