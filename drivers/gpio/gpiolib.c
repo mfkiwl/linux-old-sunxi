@@ -2585,8 +2585,13 @@ static struct gpio_desc *of_find_gpio(struct device *dev, const char *con_id,
 	else
 		snprintf(prop_name, 32, "gpios");
 
-	desc = of_get_named_gpiod_flags(dev->of_node, prop_name, idx,
-					&of_flags);
+	/* try gpio-names based lookup first */
+	desc = of_get_gpiod_flags_by_name(dev->of_node, con_id, &of_flags);
+
+	/* fallback to function based lookup */
+	if (IS_ERR(desc))
+		desc = of_get_named_gpiod_flags(dev->of_node, prop_name, idx,
+				&of_flags);
 
 	if (IS_ERR(desc))
 		return desc;
