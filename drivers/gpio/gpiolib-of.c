@@ -97,6 +97,54 @@ struct gpio_desc *of_get_named_gpiod_flags(struct device_node *np,
 EXPORT_SYMBOL(of_get_named_gpiod_flags);
 
 /**
+ * of_get_gpiod_flags_by_name() - Get a GPIO descriptor and flags by name
+ * @np:		device node to get GPIO from
+ * @name:	matching name of gpio phandle
+ * @flags:	a flags pointer to fill in
+ *
+ * Returns GPIO descriptor to use with Linux GPIO API, or one of the errno
+ * value on the error condition. If @flags is not NULL the function also fills
+ * in flags for the GPIO.
+ */
+struct gpio_desc *of_get_gpiod_flags_by_name(struct device_node *np,
+		const char *name, enum of_gpio_flags *flags)
+{
+	/* Return -EPROBE_DEFER to support probe() functions to be called
+	 * later when the GPIO actually becomes available
+	 */
+	struct gg_data gg_data = {
+		.flags = flags,
+		.out_gpio = ERR_PTR(-EPROBE_DEFER)
+	};
+	int index = 0;
+	int ret;
+
+	/* exit if no name given */
+	if (!name)
+		return ERR_PTR(-EINVAL);
+
+	/* .of_xlate might decide to not fill in the flags, so clear it. */
+	if (flags)
+		*flags = 0;
+
+	if (name)
+		index = of_property_match_string(np, "gpio-names", name);
+
+	ret = of_parse_phandle_with_args(np, "gpios", "#gpio-cells", index,
+					 &gg_data.gpiospec);
+
+	if (ret)
+		return ERR_PTR(ret);
+
+	gpiochip_find(&gg_data, of_gpiochip_find_and_xlate);
+
+	of_node_put(gg_data.gpiospec.np);
+
+	return gg_data.out_gpio;
+}
+EXPORT_SYMBOL(of_get_gpiod_flags_by_names);
+
+/**
  * of_gpio_simple_xlate - translate gpio_spec to the GPIO number and flags
  * @gc:		pointer to the gpio_chip structure
  * @np:		device node of the GPIO chip
