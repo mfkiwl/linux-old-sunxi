@@ -81,8 +81,8 @@ enum {
 #define AXP20X_BATT_CHRG_I_L		0x7b
 #define AXP20X_BATT_DISCHRG_I_H		0x7c
 #define AXP20X_BATT_DISCHRG_I_L		0x7d
-#define AXP20X_IPSOUT_V_HIGH_H		0x7e
-#define AXP20X_IPSOUT_V_HIGH_L		0x7f
+#define AXP20X_APS_V_H			0x7e
+#define AXP20X_APS_V_L			0x7f
 
 /* Power supply */
 #define AXP20X_DCDC_MODE		0x80
