@@ -93,7 +93,7 @@ static int axp20x_adc_read(struct axp20x_dev *axp20x, int channel)
 	return ret;
 }
 
-static ssize_t axp20x_show_voltage(struct device *dev,
+static ssize_t show_voltage(struct device *dev,
 			    struct device_attribute *attr, char *buf)
 {
 	struct axp20x_dev *axp20x = dev_get_drvdata(dev);
@@ -106,7 +106,7 @@ static ssize_t axp20x_show_voltage(struct device *dev,
 	return sprintf(buf, "%d\n", val);
 }
 
-static ssize_t axp20x_show_temp(struct device *dev,
+static ssize_t show_temp(struct device *dev,
 			    struct device_attribute *attr, char *buf)
 {
 	struct axp20x_dev *axp20x = dev_get_drvdata(dev);
@@ -118,7 +118,7 @@ static ssize_t axp20x_show_temp(struct device *dev,
 	return sprintf(buf, "%d\n", val);
 }
 
-static ssize_t axp20x_show_label(struct device *dev,
+static ssize_t show_label(struct device *dev,
 			  struct device_attribute *attr, char *buf)
 {
 	int channel = to_sensor_dev_attr(attr)->index;
@@ -126,65 +126,65 @@ static ssize_t axp20x_show_label(struct device *dev,
 	return sprintf(buf, "%s\n", input_names[channel]);
 }
 
-#define AXP20X_NAMED_VOLTAGE(dev, id, name) \
-	static SENSOR_DEVICE_ATTR(dev##_in##id##_input, S_IRUGO, \
-				  dev##_show_voltage, NULL, name); \
-	static SENSOR_DEVICE_ATTR(dev##_in##id##_label, S_IRUGO, \
-				  dev##_show_label, NULL, name)
+#define AXP20X_NAMED_VOLTAGE(id, name) \
+	static SENSOR_DEVICE_ATTR(in##id##_input, S_IRUGO, show_voltage,\
+				  NULL, name);		\
+	static SENSOR_DEVICE_ATTR(in##id##_label, S_IRUGO, show_label,\
+				  NULL, name)
 
-#define AXP20X_NAMED_CURRENT(dev, id, name) \
-	static SENSOR_DEVICE_ATTR(dev##_curr##id##_input, S_IRUGO, \
-				  dev##_show_voltage, NULL, name); \
-	static SENSOR_DEVICE_ATTR(dev##_curr##id##_label, S_IRUGO, \
-				  dev##_show_label, NULL, name)
+#define AXP20X_NAMED_CURRENT(id, name) \
+	static SENSOR_DEVICE_ATTR(curr##id##_input, S_IRUGO, show_voltage,\
+				  NULL, name);		\
+	static SENSOR_DEVICE_ATTR(curr##id##_label, S_IRUGO, show_label,\
+				  NULL, name)
 
-#define AXP20X_NAMED_POWER(dev, id, name) \
-	static SENSOR_DEVICE_ATTR(dev##_power##id##_input, S_IRUGO, \
-				  dev##_show_voltage, NULL, name); \
-	static SENSOR_DEVICE_ATTR(dev##_power##id##_label, S_IRUGO, \
-				  dev##_show_label, NULL, name)
+#define AXP20X_NAMED_POWER(id, name) \
+	static SENSOR_DEVICE_ATTR(power##id##_input, S_IRUGO, show_voltage,\
+				  NULL, name);		\
+	static SENSOR_DEVICE_ATTR(power##id##_label, S_IRUGO, show_label,\
+				  NULL, name)
 
-#define AXP20X_NAMED_TEMP(dev, id, name) \
-	static SENSOR_DEVICE_ATTR(dev##_temp##id##_input, S_IRUGO, \
-				  dev##_show_temp, NULL, name); \
-	static SENSOR_DEVICE_ATTR(dev##_temp##id##_label, S_IRUGO, \
-				  dev##_show_label, NULL, name)
+#define AXP20X_NAMED_TEMP(id, name) \
+	static SENSOR_DEVICE_ATTR(temp##id##_input, S_IRUGO, show_temp,\
+				  NULL, name);		\
+	static SENSOR_DEVICE_ATTR(temp##id##_label, S_IRUGO, show_label,\
+				  NULL, name)
 
-AXP20X_NAMED_VOLTAGE(axp20x, 0, AXP20X_ACIN_V_ADC_H);
-AXP20X_NAMED_VOLTAGE(axp20x, 1, AXP20X_VBUS_V_ADC_H);
-AXP20X_NAMED_VOLTAGE(axp20x, 2, AXP20X_BATT_V_H);
-AXP20X_NAMED_VOLTAGE(axp20x, 3, AXP20X_APS_V_H);
-AXP20X_NAMED_CURRENT(axp20x, 1, AXP20X_ACIN_I_ADC_H);
-AXP20X_NAMED_CURRENT(axp20x, 2, AXP20X_VBUS_I_ADC_H);
-AXP20X_NAMED_CURRENT(axp20x, 3, AXP20X_BATT_CHRG_I_H);
-AXP20X_NAMED_CURRENT(axp20x, 4, AXP20X_BATT_DISCHRG_I_H);
-AXP20X_NAMED_POWER(axp20x, 1, AXP20X_PWR_BATT_H);
-AXP20X_NAMED_TEMP(axp20x, 1, AXP20X_TEMP_ADC_H);
+AXP20X_NAMED_VOLTAGE(0, AXP20X_ACIN_V_ADC_H);
+AXP20X_NAMED_VOLTAGE(1, AXP20X_VBUS_V_ADC_H);
+AXP20X_NAMED_VOLTAGE(2, AXP20X_BATT_V_H);
+AXP20X_NAMED_VOLTAGE(3, AXP20X_APS_V_H);
+AXP20X_NAMED_CURRENT(1, AXP20X_ACIN_I_ADC_H);
+AXP20X_NAMED_CURRENT(2, AXP20X_VBUS_I_ADC_H);
+AXP20X_NAMED_CURRENT(3, AXP20X_BATT_CHRG_I_H);
+AXP20X_NAMED_CURRENT(4, AXP20X_BATT_DISCHRG_I_H);
+AXP20X_NAMED_POWER(1, AXP20X_PWR_BATT_H);
+AXP20X_NAMED_TEMP(1, AXP20X_TEMP_ADC_H);
 
 static struct attribute *axp20x_attrs[] = {
-	&sensor_dev_attr_axp20x_in0_input.dev_attr.attr,
-	&sensor_dev_attr_axp20x_in0_label.dev_attr.attr,
-	&sensor_dev_attr_axp20x_in1_input.dev_attr.attr,
-	&sensor_dev_attr_axp20x_in1_label.dev_attr.attr,
-	&sensor_dev_attr_axp20x_in2_input.dev_attr.attr,
-	&sensor_dev_attr_axp20x_in2_label.dev_attr.attr,
-	&sensor_dev_attr_axp20x_in3_input.dev_attr.attr,
-	&sensor_dev_attr_axp20x_in3_label.dev_attr.attr,
+	&sensor_dev_attr_in0_input.dev_attr.attr,
+	&sensor_dev_attr_in0_label.dev_attr.attr,
+	&sensor_dev_attr_in1_input.dev_attr.attr,
+	&sensor_dev_attr_in1_label.dev_attr.attr,
+	&sensor_dev_attr_in2_input.dev_attr.attr,
+	&sensor_dev_attr_in2_label.dev_attr.attr,
+	&sensor_dev_attr_in3_input.dev_attr.attr,
+	&sensor_dev_attr_in3_label.dev_attr.attr,
 
-	&sensor_dev_attr_axp20x_curr1_input.dev_attr.attr,
-	&sensor_dev_attr_axp20x_curr1_label.dev_attr.attr,
-	&sensor_dev_attr_axp20x_curr2_input.dev_attr.attr,
-	&sensor_dev_attr_axp20x_curr2_label.dev_attr.attr,
-	&sensor_dev_attr_axp20x_curr3_input.dev_attr.attr,
-	&sensor_dev_attr_axp20x_curr3_label.dev_attr.attr,
-	&sensor_dev_attr_axp20x_curr4_input.dev_attr.attr,
-	&sensor_dev_attr_axp20x_curr4_label.dev_attr.attr,
+	&sensor_dev_attr_curr1_input.dev_attr.attr,
+	&sensor_dev_attr_curr1_label.dev_attr.attr,
+	&sensor_dev_attr_curr2_input.dev_attr.attr,
+	&sensor_dev_attr_curr2_label.dev_attr.attr,
+	&sensor_dev_attr_curr3_input.dev_attr.attr,
+	&sensor_dev_attr_curr3_label.dev_attr.attr,
+	&sensor_dev_attr_curr4_input.dev_attr.attr,
+	&sensor_dev_attr_curr4_label.dev_attr.attr,
 
-	&sensor_dev_attr_axp20x_power1_input.dev_attr.attr,
-	&sensor_dev_attr_axp20x_power1_label.dev_attr.attr,
+	&sensor_dev_attr_power1_input.dev_attr.attr,
+	&sensor_dev_attr_power1_label.dev_attr.attr,
 
-	&sensor_dev_attr_axp20x_temp1_input.dev_attr.attr,
-	&sensor_dev_attr_axp20x_temp1_label.dev_attr.attr,
+	&sensor_dev_attr_temp1_input.dev_attr.attr,
+	&sensor_dev_attr_temp1_label.dev_attr.attr,
 
 	NULL,
 };
