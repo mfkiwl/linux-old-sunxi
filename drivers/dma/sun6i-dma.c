@@ -26,24 +26,6 @@
 #include "virt-dma.h"
 
 /*
- * There's 16 physical channels that can work in parallel.
- *
- * However we have 30 different endpoints for our requests.
- *
- * Since the channels are able to handle only an unidirectional
- * transfer, we need to allocate more virtual channels so that
- * everyone can grab one channel.
- *
- * Some devices can't work in both direction (mostly because it
- * wouldn't make sense), so we have a bit fewer virtual channels than
- * 2 channels per endpoints.
- */
-
-#define NR_MAX_CHANNELS		16
-#define NR_MAX_REQUESTS		30
-#define NR_MAX_VCHANS		53
-
-/*
  * Common registers
  */
 #define DMA_IRQ_EN(x)		((x) * 0x04)
@@ -100,6 +82,19 @@
 #define LLI_LAST_ITEM	0xfffff800
 #define NORMAL_WAIT	8
 #define DRQ_SDRAM	1
+
+/*
+ * Hardware channels / ports representation
+ *
+ * The hardware is used in several SoCs, with differing numbers
+ * of channels and endpoints. This structure ties those numbers
+ * to a certain compatible string.
+ */
+struct sun6i_dma_ch_data {
+	u32 nr_max_channels;
+	u32 nr_max_requests;
+	u32 nr_max_vchans;
+};
 
 /*
  * Hardware representation of the LLI
@@ -159,6 +154,7 @@ struct sun6i_dma_dev {
 	struct dma_pool		*pool;
 	struct sun6i_pchan	*pchans;
 	struct sun6i_vchan	*vchans;
+	struct sun6i_dma_ch_data *hw;
 };
 
 static struct device *chan2dev(struct dma_chan *chan)
@@ -858,9 +854,38 @@ static inline void sun6i_dma_free(struct sun6i_dma_dev *sdev)
 	}
 }
 
+/*
+ * There's 16 physical channels that can work in parallel.
+ *
+ * However we have 30 different endpoints for our requests.
+ *
+ * Since the channels are able to handle only an unidirectional
+ * transfer, we need to allocate more virtual channels so that
+ * everyone can grab one channel.
+ *
+ * Some devices can't work in both direction (mostly because it
+ * wouldn't make sense), so we have a bit fewer virtual channels than
+ * 2 channels per endpoints.
+ */
+
+#define NR_MAX_CHANNELS		16
+#define NR_MAX_REQUESTS		30
+#define NR_MAX_VCHANS		53
+static struct sun6i_dma_hw sun6i_a31_dma_hw = {
+	.nr_max_channels = 16,
+	.nr_max_requests = 30,
+	.nr_max_vchans   = 53,
+};
+
+static struct of_device_id sun6i_dma_match[] = {
+	{ .compatible = "allwinner,sun6i-a31-dma", .data = &sun6i_a31_dma_hw, },
+	{ /* sentinel */ }
+};
+
 static int sun6i_dma_probe(struct platform_device *pdev)
 {
 	struct sun6i_dma_dev *sdc;
+	struct sun6i_dma_hw *hw;
 	struct resource *res;
 	struct clk *mux, *pll6;
 	int ret, i;
@@ -1031,11 +1056,6 @@ static int sun6i_dma_remove(struct platform_device *pdev)
 
 	return 0;
 }
-
-static struct of_device_id sun6i_dma_match[] = {
-	{ .compatible = "allwinner,sun6i-a31-dma" },
-	{ /* sentinel */ }
-};
 
 static struct platform_driver sun6i_dma_driver = {
 	.probe		= sun6i_dma_probe,
