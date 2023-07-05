@@ -126,22 +126,13 @@ static int gxp_i2c_master_xfer(struct i2c_adapter *adapter,
 	time_left = wait_for_completion_timeout(&drvdata->completion,
 						adapter->timeout);
 	ret = num - drvdata->msgs_remaining;
-	if (time_left == 0) {
-		switch (drvdata->state) {
-		case GXP_I2C_WDATA_PHASE:
-			break;
-		case GXP_I2C_RDATA_PHASE:
-			break;
-		case GXP_I2C_ADDR_PHASE:
-			break;
-		default:
-			break;
-		}
+	if (time_left == 0)
 		return -ETIMEDOUT;
-	}
 
-	if (drvdata->state == GXP_I2C_ADDR_NACK ||
-	    drvdata->state == GXP_I2C_DATA_NACK)
+	if (drvdata->state == GXP_I2C_ADDR_NACK)
+		return -ENXIO;
+
+	if (drvdata->state == GXP_I2C_DATA_NACK)
 		return -EIO;
 
 	return ret;
@@ -362,7 +353,6 @@ static void gxp_i2c_chk_data_ack(struct gxp_i2c_drvdata *drvdata)
 	writew(value, drvdata->base + GXP_I2CMCMD);
 }
 
-#if IS_ENABLED(CONFIG_I2C_SLAVE)
 static bool gxp_i2c_slave_irq_handler(struct gxp_i2c_drvdata *drvdata)
 {
 	u8 value;
@@ -446,7 +436,6 @@ static bool gxp_i2c_slave_irq_handler(struct gxp_i2c_drvdata *drvdata)
 
 	return true;
 }
-#endif
 
 static irqreturn_t gxp_i2c_irq_handler(int irq, void *_drvdata)
 {
@@ -525,7 +514,7 @@ static int gxp_i2c_probe(struct platform_device *pdev)
 		i2cg_map = syscon_regmap_lookup_by_phandle(pdev->dev.of_node,
 							   "hpe,sysreg");
 		if (IS_ERR(i2cg_map)) {
-			return dev_err_probe(&pdev->dev, IS_ERR(i2cg_map),
+			return dev_err_probe(&pdev->dev, PTR_ERR(i2cg_map),
 					     "failed to map i2cg_handle\n");
 		}
 
@@ -588,15 +577,13 @@ static int gxp_i2c_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int gxp_i2c_remove(struct platform_device *pdev)
+static void gxp_i2c_remove(struct platform_device *pdev)
 {
 	struct gxp_i2c_drvdata *drvdata = platform_get_drvdata(pdev);
 
 	/* Disable interrupt */
 	regmap_update_bits(i2cg_map, GXP_I2CINTEN, BIT(drvdata->engine), 0);
 	i2c_del_adapter(&drvdata->adapter);
-
-	return 0;
 }
 
 static const struct of_device_id gxp_i2c_of_match[] = {
@@ -607,7 +594,7 @@ MODULE_DEVICE_TABLE(of, gxp_i2c_of_match);
 
 static struct platform_driver gxp_i2c_driver = {
 	.probe	= gxp_i2c_probe,
-	.remove = gxp_i2c_remove,
+	.remove_new = gxp_i2c_remove,
 	.driver = {
 		.name = "gxp-i2c",
 		.of_match_table = gxp_i2c_of_match,

@@ -1147,7 +1147,8 @@ struct irq_domain *irq_domain_create_hierarchy(struct irq_domain *parent,
 		domain = __irq_domain_create(fwnode, 0, ~0, 0, ops, host_data);
 
 	if (domain) {
-		domain->root = parent->root;
+		if (parent)
+			domain->root = parent->root;
 		domain->parent = parent;
 		domain->flags |= flags;
 
@@ -1914,6 +1915,8 @@ static void irq_domain_check_hierarchy(struct irq_domain *domain)
 #endif	/* CONFIG_IRQ_DOMAIN_HIERARCHY */
 
 #ifdef CONFIG_GENERIC_IRQ_DEBUGFS
+#include "internals.h"
+
 static struct dentry *domain_dir;
 
 static void

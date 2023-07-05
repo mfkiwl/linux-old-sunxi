@@ -914,9 +914,14 @@ static int m41t80_probe(struct i2c_client *client)
 					      "wakeup-source");
 #endif
 	if (client->irq > 0) {
+		unsigned long irqflags = IRQF_TRIGGER_LOW;
+
+		if (dev_fwnode(&client->dev))
+			irqflags = 0;
+
 		rc = devm_request_threaded_irq(&client->dev, client->irq,
 					       NULL, m41t80_handle_irq,
-					       IRQF_TRIGGER_LOW | IRQF_ONESHOT,
+					       irqflags | IRQF_ONESHOT,
 					       "m41t80", client);
 		if (rc) {
 			dev_warn(&client->dev, "unable to request IRQ, alarms disabled\n");
@@ -1008,7 +1013,7 @@ static struct i2c_driver m41t80_driver = {
 		.of_match_table = of_match_ptr(m41t80_of_match),
 		.pm = &m41t80_pm,
 	},
-	.probe_new = m41t80_probe,
+	.probe = m41t80_probe,
 	.remove = m41t80_remove,
 	.id_table = m41t80_id,
 };

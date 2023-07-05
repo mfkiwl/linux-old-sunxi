@@ -32,9 +32,6 @@
 
 #include <trace/events/module.h>
 
-#define CAP_BSET	(void *)1
-#define CAP_PI		(void *)2
-
 static kernel_cap_t usermodehelper_bset = CAP_FULL_SET;
 static kernel_cap_t usermodehelper_inheritable = CAP_FULL_SET;
 static DEFINE_SPINLOCK(umh_sysctl_lock);
@@ -497,6 +494,7 @@ int call_usermodehelper(const char *path, char **argv, char **envp, int wait)
 }
 EXPORT_SYMBOL(call_usermodehelper);
 
+#if defined(CONFIG_SYSCTL)
 static int proc_cap_handler(struct ctl_table *table, int write,
 			 void *buffer, size_t *lenp, loff_t *ppos)
 {
@@ -512,16 +510,11 @@ static int proc_cap_handler(struct ctl_table *table, int write,
 	/*
 	 * convert from the global kernel_cap_t to the ulong array to print to
 	 * userspace if this is a read.
+	 *
+	 * Legacy format: capabilities are exposed as two 32-bit values
 	 */
+	cap = table->data;
 	spin_lock(&umh_sysctl_lock);
-	if (table->data == CAP_BSET)
-		cap = &usermodehelper_bset;
-	else if (table->data == CAP_PI)
-		cap = &usermodehelper_inheritable;
-	else
-		BUG();
-
-	/* Legacy format: capabilities are exposed as two 32-bit values */
 	cap_array[0] = (u32) cap->val;
 	cap_array[1] = cap->val >> 32;
 	spin_unlock(&umh_sysctl_lock);
@@ -552,20 +545,28 @@ static int proc_cap_handler(struct ctl_table *table, int write,
 	return 0;
 }
 
-struct ctl_table usermodehelper_table[] = {
+static struct ctl_table usermodehelper_table[] = {
 	{
 		.procname	= "bset",
-		.data		= CAP_BSET,
+		.data		= &usermodehelper_bset,
 		.maxlen		= 2 * sizeof(unsigned long),
 		.mode		= 0600,
 		.proc_handler	= proc_cap_handler,
 	},
 	{
 		.procname	= "inheritable",
-		.data		= CAP_PI,
+		.data		= &usermodehelper_inheritable,
 		.maxlen		= 2 * sizeof(unsigned long),
 		.mode		= 0600,
 		.proc_handler	= proc_cap_handler,
 	},
 	{ }
 };
+
+static int __init init_umh_sysctls(void)
+{
+	register_sysctl_init("kernel/usermodehelper", usermodehelper_table);
+	return 0;
+}
+early_initcall(init_umh_sysctls);
+#endif /* CONFIG_SYSCTL */

@@ -30,18 +30,18 @@ struct nvme_dhchap_queue_context {
 	u32 s2;
 	u16 transaction;
 	u8 status;
+	u8 dhgroup_id;
 	u8 hash_id;
 	size_t hash_len;
-	u8 dhgroup_id;
 	u8 c1[64];
 	u8 c2[64];
 	u8 response[64];
 	u8 *host_response;
 	u8 *ctrl_key;
-	int ctrl_key_len;
 	u8 *host_key;
-	int host_key_len;
 	u8 *sess_key;
+	int ctrl_key_len;
+	int host_key_len;
 	int sess_key_len;
 };
 
@@ -256,7 +256,7 @@ select_kpp:
 				 chap->qid, ret, gid_name);
 			chap->status = NVME_AUTH_DHCHAP_FAILURE_DHGROUP_UNUSABLE;
 			chap->dh_tfm = NULL;
-			return -ret;
+			return ret;
 		}
 		dev_dbg(ctrl->device, "qid %d: selected DH group %s\n",
 			chap->qid, gid_name);

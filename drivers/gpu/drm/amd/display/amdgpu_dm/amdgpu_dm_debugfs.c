@@ -724,7 +724,7 @@ static ssize_t dp_phy_test_pattern_debugfs_write(struct file *f, const char __us
 	for (i = 0; i < (unsigned int)(link_training_settings.link_settings.lane_count); i++)
 		link_training_settings.hw_lane_settings[i] = link->cur_lane_setting[i];
 
-	dc_link_set_test_pattern(
+	dc_link_dp_set_test_pattern(
 		link,
 		test_pattern,
 		DP_TEST_PATTERN_COLOR_SPACE_RGB,
@@ -907,6 +907,61 @@ unlock:
 DEFINE_SHOW_ATTRIBUTE(amdgpu_current_bpc);
 
 /*
+ * Returns the current colorspace for the crtc.
+ * Example usage: cat /sys/kernel/debug/dri/0/crtc-0/amdgpu_current_colorspace
+ */
+static int amdgpu_current_colorspace_show(struct seq_file *m, void *data)
+{
+	struct drm_crtc *crtc = m->private;
+	struct drm_device *dev = crtc->dev;
+	struct dm_crtc_state *dm_crtc_state = NULL;
+	int res = -ENODEV;
+
+	mutex_lock(&dev->mode_config.mutex);
+	drm_modeset_lock(&crtc->mutex, NULL);
+	if (crtc->state == NULL)
+		goto unlock;
+
+	dm_crtc_state = to_dm_crtc_state(crtc->state);
+	if (dm_crtc_state->stream == NULL)
+		goto unlock;
+
+	switch (dm_crtc_state->stream->output_color_space) {
+	case COLOR_SPACE_SRGB:
+		seq_printf(m, "sRGB");
+		break;
+	case COLOR_SPACE_YCBCR601:
+	case COLOR_SPACE_YCBCR601_LIMITED:
+		seq_printf(m, "BT601_YCC");
+		break;
+	case COLOR_SPACE_YCBCR709:
+	case COLOR_SPACE_YCBCR709_LIMITED:
+		seq_printf(m, "BT709_YCC");
+		break;
+	case COLOR_SPACE_ADOBERGB:
+		seq_printf(m, "opRGB");
+		break;
+	case COLOR_SPACE_2020_RGB_FULLRANGE:
+		seq_printf(m, "BT2020_RGB");
+		break;
+	case COLOR_SPACE_2020_YCBCR:
+		seq_printf(m, "BT2020_YCC");
+		break;
+	default:
+		goto unlock;
+	}
+	res = 0;
+
+unlock:
+	drm_modeset_unlock(&crtc->mutex);
+	mutex_unlock(&dev->mode_config.mutex);
+
+	return res;
+}
+DEFINE_SHOW_ATTRIBUTE(amdgpu_current_colorspace);
+
+
+/*
  * Example usage:
  * Disable dsc passthrough, i.e.,: have dsc decoding at converver, not external RX
  *   echo 1 /sys/kernel/debug/dri/0/DP-1/dsc_disable_passthrough
@@ -947,7 +1002,6 @@ static ssize_t dp_dsc_passthrough_set(struct file *f, const char __user *buf,
 	return 0;
 }
 
-#ifdef CONFIG_DRM_AMD_DC_HDCP
 /*
  * Returns the HDCP capability of the Display (1.4 for now).
  *
@@ -984,7 +1038,6 @@ static int hdcp_sink_capability_show(struct seq_file *m, void *data)
 
 	return 0;
 }
-#endif
 
 /*
  * Returns whether the connected display is internal and not hotpluggable.
@@ -1039,88 +1092,6 @@ static ssize_t dp_sdp_message_debugfs_write(struct file *f, const char __user *b
 	dc_stream_send_dp_sdp(acrtc_state->stream, data, write_size);
 
 	return write_size;
-}
-
-static ssize_t dp_dpcd_address_write(struct file *f, const char __user *buf,
-				 size_t size, loff_t *pos)
-{
-	int r;
-	struct amdgpu_dm_connector *connector = file_inode(f)->i_private;
-
-	if (size < sizeof(connector->debugfs_dpcd_address))
-		return -EINVAL;
-
-	r = copy_from_user(&connector->debugfs_dpcd_address,
-			buf, sizeof(connector->debugfs_dpcd_address));
-
-	return size - r;
-}
-
-static ssize_t dp_dpcd_size_write(struct file *f, const char __user *buf,
-				 size_t size, loff_t *pos)
-{
-	int r;
-	struct amdgpu_dm_connector *connector = file_inode(f)->i_private;
-
-	if (size < sizeof(connector->debugfs_dpcd_size))
-		return -EINVAL;
-
-	r = copy_from_user(&connector->debugfs_dpcd_size,
-			buf, sizeof(connector->debugfs_dpcd_size));
-
-	if (connector->debugfs_dpcd_size > 256)
-		connector->debugfs_dpcd_size = 0;
-
-	return size - r;
-}
-
-static ssize_t dp_dpcd_data_write(struct file *f, const char __user *buf,
-				 size_t size, loff_t *pos)
-{
-	int r;
-	char *data;
-	struct amdgpu_dm_connector *connector = file_inode(f)->i_private;
-	struct dc_link *link = connector->dc_link;
-	uint32_t write_size = connector->debugfs_dpcd_size;
-
-	if (!write_size || size < write_size)
-		return -EINVAL;
-
-	data = kzalloc(write_size, GFP_KERNEL);
-	if (!data)
-		return 0;
-
-	r = copy_from_user(data, buf, write_size);
-
-	dm_helpers_dp_write_dpcd(link->ctx, link,
-			connector->debugfs_dpcd_address, data, write_size - r);
-	kfree(data);
-	return write_size - r;
-}
-
-static ssize_t dp_dpcd_data_read(struct file *f, char __user *buf,
-				 size_t size, loff_t *pos)
-{
-	int r;
-	char *data;
-	struct amdgpu_dm_connector *connector = file_inode(f)->i_private;
-	struct dc_link *link = connector->dc_link;
-	uint32_t read_size = connector->debugfs_dpcd_size;
-
-	if (!read_size || size < read_size)
-		return 0;
-
-	data = kzalloc(read_size, GFP_KERNEL);
-	if (!data)
-		return 0;
-
-	dm_helpers_dp_read_dpcd(link->ctx, link,
-			connector->debugfs_dpcd_address, data, read_size);
-
-	r = copy_to_user(buf, data, read_size);
-
-	kfree(data);
-	return read_size - r;
 }
 
 /* function: Read link's DSC & FEC capabilities
@@ -2593,9 +2564,7 @@ DEFINE_SHOW_ATTRIBUTE(dp_dsc_fec_support);
 DEFINE_SHOW_ATTRIBUTE(dmub_fw_state);
 DEFINE_SHOW_ATTRIBUTE(dmub_tracebuffer);
 DEFINE_SHOW_ATTRIBUTE(dp_lttpr_status);
-#ifdef CONFIG_DRM_AMD_DC_HDCP
 DEFINE_SHOW_ATTRIBUTE(hdcp_sink_capability);
-#endif
 DEFINE_SHOW_ATTRIBUTE(internal_display);
 DEFINE_SHOW_ATTRIBUTE(psr_capability);
 DEFINE_SHOW_ATTRIBUTE(dp_is_mst_connector);
@@ -2686,25 +2655,6 @@ static const struct file_operations sdp_message_fops = {
 	.llseek = default_llseek
 };
 
-static const struct file_operations dp_dpcd_address_debugfs_fops = {
-	.owner = THIS_MODULE,
-	.write = dp_dpcd_address_write,
-	.llseek = default_llseek
-};
-
-static const struct file_operations dp_dpcd_size_debugfs_fops = {
-	.owner = THIS_MODULE,
-	.write = dp_dpcd_size_write,
-	.llseek = default_llseek
-};
-
-static const struct file_operations dp_dpcd_data_debugfs_fops = {
-	.owner = THIS_MODULE,
-	.read = dp_dpcd_data_read,
-	.write = dp_dpcd_data_write,
-	.llseek = default_llseek
-};
-
 static const struct file_operations dp_max_bpc_debugfs_fops = {
 	.owner = THIS_MODULE,
 	.read = dp_max_bpc_read,
@@ -2726,13 +2676,8 @@ static const struct {
 		{"phy_settings", &dp_phy_settings_debugfs_fop},
 		{"lttpr_status", &dp_lttpr_status_fops},
 		{"test_pattern", &dp_phy_test_pattern_fops},
-#ifdef CONFIG_DRM_AMD_DC_HDCP
 		{"hdcp_sink_capability", &hdcp_sink_capability_fops},
-#endif
 		{"sdp_message", &sdp_message_fops},
-		{"aux_dpcd_address", &dp_dpcd_address_debugfs_fops},
-		{"aux_dpcd_size", &dp_dpcd_size_debugfs_fops},
-		{"aux_dpcd_data", &dp_dpcd_data_debugfs_fops},
 		{"dsc_clock_en", &dp_dsc_clock_en_debugfs_fops},
 		{"dsc_slice_width", &dp_dsc_slice_width_debugfs_fops},
 		{"dsc_slice_height", &dp_dsc_slice_height_debugfs_fops},
@@ -2749,14 +2694,13 @@ static const struct {
 		{"is_dpia_link", &is_dpia_link_fops}
 };
 
-#ifdef CONFIG_DRM_AMD_DC_HDCP
 static const struct {
 	char *name;
 	const struct file_operations *fops;
 } hdmi_debugfs_entries[] = {
 		{"hdcp_sink_capability", &hdcp_sink_capability_fops}
 };
-#endif
+
 /*
  * Force YUV420 output if available from the given mode
  */
@@ -2801,6 +2745,48 @@ static int psr_get(void *data, u64 *val)
 }
 
 /*
+ *  Read PSR state residency
+ */
+static int psr_read_residency(void *data, u64 *val)
+{
+	struct amdgpu_dm_connector *connector = data;
+	struct dc_link *link = connector->dc_link;
+	u32 residency;
+
+	link->dc->link_srv->edp_get_psr_residency(link, &residency);
+
+	*val = (u64)residency;
+
+	return 0;
+}
+
+/* read allow_edp_hotplug_detection */
+static int allow_edp_hotplug_detection_get(void *data, u64 *val)
+{
+	struct amdgpu_dm_connector *aconnector = data;
+	struct drm_connector *connector = &aconnector->base;
+	struct drm_device *dev = connector->dev;
+	struct amdgpu_device *adev = drm_to_adev(dev);
+
+	*val = adev->dm.dc->config.allow_edp_hotplug_detection;
+
+	return 0;
+}
+
+/* set allow_edp_hotplug_detection */
+static int allow_edp_hotplug_detection_set(void *data, u64 val)
+{
+	struct amdgpu_dm_connector *aconnector = data;
+	struct drm_connector *connector = &aconnector->base;
+	struct drm_device *dev = connector->dev;
+	struct amdgpu_device *adev = drm_to_adev(dev);
+
+	adev->dm.dc->config.allow_edp_hotplug_detection = (uint32_t) val;
+
+	return 0;
+}
+
+/*
  * Set dmcub trace event IRQ enable or disable.
  * Usage to enable dmcub trace event IRQ: echo 1 > /sys/kernel/debug/dri/0/amdgpu_dm_dmcub_trace_event_en
  * Usage to disable dmcub trace event IRQ: echo 0 > /sys/kernel/debug/dri/0/amdgpu_dm_dmcub_trace_event_en
@@ -2835,6 +2821,12 @@ DEFINE_DEBUGFS_ATTRIBUTE(dmcub_trace_event_state_fops, dmcub_trace_event_state_g
 			 dmcub_trace_event_state_set, "%llu\n");
 
 DEFINE_DEBUGFS_ATTRIBUTE(psr_fops, psr_get, NULL, "%llu\n");
+DEFINE_DEBUGFS_ATTRIBUTE(psr_residency_fops, psr_read_residency, NULL,
+			 "%llu\n");
+
+DEFINE_DEBUGFS_ATTRIBUTE(allow_edp_hotplug_detection_fops,
+			allow_edp_hotplug_detection_get,
+			allow_edp_hotplug_detection_set, "%llu\n");
 
 DEFINE_SHOW_ATTRIBUTE(current_backlight);
 DEFINE_SHOW_ATTRIBUTE(target_backlight);
@@ -2998,12 +2990,16 @@ void connector_debugfs_init(struct amdgpu_dm_connector *connector)
 	if (connector->base.connector_type == DRM_MODE_CONNECTOR_eDP) {
 		debugfs_create_file_unsafe("psr_capability", 0444, dir, connector, &psr_capability_fops);
 		debugfs_create_file_unsafe("psr_state", 0444, dir, connector, &psr_fops);
+		debugfs_create_file_unsafe("psr_residency", 0444, dir,
+					   connector, &psr_residency_fops);
 		debugfs_create_file("amdgpu_current_backlight_pwm", 0444, dir, connector,
 				    &current_backlight_fops);
 		debugfs_create_file("amdgpu_target_backlight_pwm", 0444, dir, connector,
 				    &target_backlight_fops);
 		debugfs_create_file("ilr_setting", 0644, dir, connector,
 					&edp_ilr_debugfs_fops);
+		debugfs_create_file("allow_edp_hotplug_detection", 0644, dir, connector,
+					&allow_edp_hotplug_detection_fops);
 	}
 
 	for (i = 0; i < ARRAY_SIZE(connector_debugfs_entries); i++) {
@@ -3012,10 +3008,6 @@ void connector_debugfs_init(struct amdgpu_dm_connector *connector)
 				    connector_debugfs_entries[i].fops);
 	}
 
-	connector->debugfs_dpcd_address = 0;
-	connector->debugfs_dpcd_size = 0;
-
-#ifdef CONFIG_DRM_AMD_DC_HDCP
 	if (connector->base.connector_type == DRM_MODE_CONNECTOR_HDMIA) {
 		for (i = 0; i < ARRAY_SIZE(hdmi_debugfs_entries); i++) {
 			debugfs_create_file(hdmi_debugfs_entries[i].name,
@@ -3023,7 +3015,6 @@ void connector_debugfs_init(struct amdgpu_dm_connector *connector)
 					    hdmi_debugfs_entries[i].fops);
 		}
 	}
-#endif
 }
 
 #ifdef CONFIG_DRM_AMD_SECURE_DISPLAY
@@ -3235,6 +3226,8 @@ void crtc_debugfs_init(struct drm_crtc *crtc)
 #endif
 	debugfs_create_file("amdgpu_current_bpc", 0644, crtc->debugfs_entry,
 			    crtc, &amdgpu_current_bpc_fops);
+	debugfs_create_file("amdgpu_current_colorspace", 0644, crtc->debugfs_entry,
+			    crtc, &amdgpu_current_colorspace_fops);
 }
 
 /*

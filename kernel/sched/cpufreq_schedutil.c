@@ -155,10 +155,11 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 
 static void sugov_get_util(struct sugov_cpu *sg_cpu)
 {
+	unsigned long util = cpu_util_cfs_boost(sg_cpu->cpu);
 	struct rq *rq = cpu_rq(sg_cpu->cpu);
 
 	sg_cpu->bw_dl = cpu_bw_dl(rq);
-	sg_cpu->util = effective_cpu_util(sg_cpu->cpu, cpu_util_cfs(sg_cpu->cpu),
+	sg_cpu->util = effective_cpu_util(sg_cpu->cpu, util,
 					  FREQUENCY_UTIL, NULL);
 }
 
@@ -546,7 +547,7 @@ static void sugov_tunables_free(struct kobject *kobj)
 	kfree(to_sugov_tunables(attr_set));
 }
 
-static struct kobj_type sugov_tunables_ktype = {
+static const struct kobj_type sugov_tunables_ktype = {
 	.default_groups = sugov_groups,
 	.sysfs_ops = &governor_sysfs_ops,
 	.release = &sugov_tunables_free,

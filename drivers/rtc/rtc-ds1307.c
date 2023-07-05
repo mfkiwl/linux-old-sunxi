@@ -1712,9 +1712,9 @@ static const struct regmap_config regmap_config = {
 	.val_bits = 8,
 };
 
-static int ds1307_probe(struct i2c_client *client,
-			const struct i2c_device_id *id)
+static int ds1307_probe(struct i2c_client *client)
 {
+	const struct i2c_device_id *id = i2c_client_get_device_id(client);
 	struct ds1307		*ds1307;
 	const void		*match;
 	int			err = -ENODEV;
